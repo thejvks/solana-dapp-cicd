@@ -98,6 +98,9 @@ jobs:
           key: cargo-registry-${{ hashFiles('**/Cargo.toml') }}
           restore-keys: cargo-registry-
 
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y pkg-config build-essential libudev-dev
+
       - name: Install Solana CLI
         run: |
           sh -c "$(curl -sSfL https://release.anza.xyz/v${{ env.SOLANA_VERSION }}/install)"
@@ -152,6 +155,9 @@ jobs:
             ~/.cargo/git
           key: cargo-registry-${{ hashFiles('**/Cargo.toml') }}
           restore-keys: cargo-registry-
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y pkg-config build-essential libudev-dev
 
       - name: Install Solana CLI
         run: |
