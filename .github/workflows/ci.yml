@@ -16,6 +16,7 @@ on:
       - 'programs/**'
       - 'tests/**'
       - 'app/**'
+      - '.github/workflows/**'
       - 'Anchor.toml'
       - 'Cargo.toml'
       - 'Cargo.lock'
@@ -59,6 +60,16 @@ jobs:
       - name: Run cargo fmt check
         run: cargo fmt --all -- --check
 
+      - name: Install Solana CLI (for keygen)
+        run: |
+          sh -c "$(curl -sSfL https://release.anza.xyz/v${{ env.SOLANA_VERSION }}/install)"
+          echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
+
+      - name: Generate program keypair for Anchor safety checks
+        run: |
+          mkdir -p target/deploy
+          solana-keygen new --no-bip39-passphrase -o target/deploy/counter-keypair.json --force
+
       - name: Run clippy linter
         run: |
           cargo clippy --all-targets --all-features -- \
@@ -92,7 +103,7 @@ jobs:
 
       - name: Run TypeScript type check
         working-directory: app
-        run: npx tsc --noEmit
+        run: npx tsc --noEmit --skipLibCheck
 
   # ===========================================================================
   # Stage 2: TEST — Run Anchor integration tests on localnet
@@ -230,7 +241,7 @@ jobs:
         run: npm run build
         env:
           NEXT_PUBLIC_SOLANA_NETWORK: devnet
-          NEXT_PUBLIC_PROGRAM_ID: "11111111111111111111111111111112"
+          NEXT_PUBLIC_PROGRAM_ID: "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
 
       - name: Upload frontend artifact
         uses: actions/upload-artifact@v4

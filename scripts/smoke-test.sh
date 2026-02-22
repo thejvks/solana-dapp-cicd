@@ -9,7 +9,7 @@
 set -e
 
 NETWORK="${1:-devnet}"
-PROGRAM_ID="${PROGRAM_ID:-11111111111111111111111111111112}"
+PROGRAM_ID="${PROGRAM_ID:-Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS}"
 RPC_URL="${RPC_URL:-https://api.devnet.solana.com}"
 
 PASS=0

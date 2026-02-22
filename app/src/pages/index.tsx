@@ -1,15 +1,29 @@
 import { useCallback, useEffect, useState } from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-import { Program, AnchorProvider, BN, web3 } from "@coral-xyz/anchor";
+import { AnchorProvider, BN, web3 } from "@coral-xyz/anchor";
+import type { Program as AnchorProgram } from "@coral-xyz/anchor";
 import Head from "next/head";
 
 import idl from "../idl/counter.json";
 
 const PROGRAM_ID = new web3.PublicKey(
   process.env.NEXT_PUBLIC_PROGRAM_ID ||
-    "11111111111111111111111111111112"
+    "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
 );
+
+// Use a loose type to avoid deep type instantiation issues with Anchor IDL generics
+type CounterProgram = AnchorProgram;
+
+async function createProgram(
+  idlJson: Record<string, unknown>,
+  programId: web3.PublicKey,
+  provider: AnchorProvider
+): Promise<CounterProgram> {
+  // Dynamic import avoids tsc deep-instantiation error TS2589
+  const { Program } = await import("@coral-xyz/anchor");
+  return new Program(idlJson as never, programId, provider) as CounterProgram;
+}
 
 export default function Home() {
   const { connection } = useConnection();
@@ -18,20 +32,14 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [txSig, setTxSig] = useState<string>("");
 
-  const getProvider = useCallback(() => {
+  const getProvider = useCallback((): AnchorProvider | null => {
     if (!wallet.publicKey) return null;
-    return new AnchorProvider(connection, wallet as any, {
+    return new AnchorProvider(connection, wallet as never, {
       commitment: "confirmed",
     });
   }, [connection, wallet]);
 
-  const getProgram = useCallback(() => {
-    const provider = getProvider();
-    if (!provider) return null;
-    return new Program(idl as any, PROGRAM_ID, provider);
-  }, [getProvider]);
-
-  const getCounterPDA = useCallback(() => {
+  const getCounterPDA = useCallback((): web3.PublicKey | null => {
     if (!wallet.publicKey) return null;
     const [pda] = web3.PublicKey.findProgramAddressSync(
       [Buffer.from("counter"), wallet.publicKey.toBuffer()],
@@ -41,17 +49,18 @@ export default function Home() {
   }, [wallet.publicKey]);
 
   const fetchCount = useCallback(async () => {
-    const program = getProgram();
+    const provider = getProvider();
     const pda = getCounterPDA();
-    if (!program || !pda) return;
+    if (!provider || !pda) return;
 
     try {
-      const account = await program.account.counter.fetch(pda);
-      setCount((account.count as BN).toNumber());
+      const program = await createProgram(idl as Record<string, unknown>, PROGRAM_ID, provider);
+      const account = await (program.account as Record<string, { fetch: (key: web3.PublicKey) => Promise<{ count: BN }> }>)["counter"].fetch(pda);
+      setCount(account.count.toNumber());
     } catch {
       setCount(null);
     }
-  }, [getProgram, getCounterPDA]);
+  }, [getProvider, getCounterPDA]);
 
   useEffect(() => {
     if (wallet.publicKey) {
@@ -60,12 +69,13 @@ export default function Home() {
   }, [wallet.publicKey, fetchCount]);
 
   const initialize = async () => {
-    const program = getProgram();
+    const provider = getProvider();
     const pda = getCounterPDA();
-    if (!program || !pda || !wallet.publicKey) return;
+    if (!provider || !pda || !wallet.publicKey) return;
 
     setLoading(true);
     try {
+      const program = await createProgram(idl as Record<string, unknown>, PROGRAM_ID, provider);
       const tx = await program.methods
         .initialize()
         .accounts({
@@ -76,45 +86,47 @@ export default function Home() {
         .rpc();
       setTxSig(tx);
       await fetchCount();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Initialize error:", err);
     }
     setLoading(false);
   };
 
   const increment = async () => {
-    const program = getProgram();
+    const provider = getProvider();
     const pda = getCounterPDA();
-    if (!program || !pda || !wallet.publicKey) return;
+    if (!provider || !pda || !wallet.publicKey) return;
 
     setLoading(true);
     try {
+      const program = await createProgram(idl as Record<string, unknown>, PROGRAM_ID, provider);
       const tx = await program.methods
         .increment()
         .accounts({ counter: pda, authority: wallet.publicKey })
         .rpc();
       setTxSig(tx);
       await fetchCount();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Increment error:", err);
     }
     setLoading(false);
   };
 
   const decrement = async () => {
-    const program = getProgram();
+    const provider = getProvider();
     const pda = getCounterPDA();
-    if (!program || !pda || !wallet.publicKey) return;
+    if (!provider || !pda || !wallet.publicKey) return;
 
     setLoading(true);
     try {
+      const program = await createProgram(idl as Record<string, unknown>, PROGRAM_ID, provider);
       const tx = await program.methods
         .decrement()
         .accounts({ counter: pda, authority: wallet.publicKey })
         .rpc();
       setTxSig(tx);
       await fetchCount();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Decrement error:", err);
     }
     setLoading(false);

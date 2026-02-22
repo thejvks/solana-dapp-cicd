@@ -13,7 +13,7 @@ set -e
 
 NETWORK="${1:-devnet}"
 BUFFER_ADDRESS="${2}"
-PROGRAM_ID="${PROGRAM_ID:-11111111111111111111111111111112}"
+PROGRAM_ID="${PROGRAM_ID:-Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS}"
 
 if [ -z "$BUFFER_ADDRESS" ]; then
   echo "❌ Error: Buffer address is required"

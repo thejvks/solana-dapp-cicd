@@ -69,7 +69,7 @@ jobs:
       - name: Extract program info
         id: program-info
         run: |
-          PROGRAM_ID=$(solana-keygen pubkey target/deploy/counter-keypair.json 2>/dev/null || echo "11111111111111111111111111111112")
+          PROGRAM_ID=$(solana-keygen pubkey target/deploy/counter-keypair.json 2>/dev/null || echo "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS")
           echo "program_id=$PROGRAM_ID" >> $GITHUB_OUTPUT
           echo "Program ID: $PROGRAM_ID"
           echo "Program size: $(wc -c < target/deploy/counter.so) bytes"
