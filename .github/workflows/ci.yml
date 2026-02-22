@@ -57,12 +57,24 @@ jobs:
           key: rust-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: rust-
 
+      - name: Install Solana CLI
+        run: |
+          sh -c "$(curl -sSfL https://release.anza.xyz/v${{ env.SOLANA_VERSION }}/install)"
+          echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
+
+      - name: Install Anchor CLI
+        run: |
+          cargo install --git https://github.com/coral-xyz/anchor avm --force
+          avm install ${{ env.ANCHOR_VERSION }}
+          avm use ${{ env.ANCHOR_VERSION }}
+
+      - name: Build program (generates keypair for Anchor safety checks)
+        run: anchor build
+
       - name: Run cargo fmt check
         run: cargo fmt --all -- --check
 
       - name: Run clippy linter
-        env:
-          ANCHOR_SAFETY_CHECK: "0"
         run: |
           cargo clippy --all-targets --all-features -- \
             -D warnings \

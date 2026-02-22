@@ -11,11 +11,15 @@ const PROGRAM_ID = new web3.PublicKey(
     "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
 );
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function createProgram(provider: AnchorProvider): any {
-  // Cast to any to avoid Anchor's deep generic type instantiation (TS2589)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return new (Program as any)(idl, provider);
+// Cast through unknown to avoid Anchor deep generic type instantiation (TS2589)
+function createProgram(provider: AnchorProvider) {
+  const ProgramClass = Program as unknown as {
+    new (idl: Record<string, unknown>, provider: AnchorProvider): {
+      methods: Record<string, (...args: unknown[]) => { accounts: (accs: Record<string, unknown>) => { rpc: () => Promise<string> } }>;
+      account: Record<string, { fetch: (key: unknown) => Promise<Record<string, unknown>> }>;
+    };
+  };
+  return new ProgramClass(idl as unknown as Record<string, unknown>, provider);
 }
 
 export default function Home() {
@@ -27,8 +31,7 @@ export default function Home() {
 
   const getProvider = useCallback((): AnchorProvider | null => {
     if (!wallet.publicKey) return null;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return new AnchorProvider(connection, wallet as any, {
+    return new AnchorProvider(connection, wallet as never, {
       commitment: "confirmed",
     });
   }, [connection, wallet]);
