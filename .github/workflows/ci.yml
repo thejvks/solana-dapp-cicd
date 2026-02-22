@@ -65,7 +65,7 @@ jobs:
       - name: Install Anchor CLI
         run: |
           cargo install --git https://github.com/coral-xyz/anchor avm --force
-          avm install ${{ env.ANCHOR_VERSION }}
+          avm install ${{ env.ANCHOR_VERSION }} --force
           avm use ${{ env.ANCHOR_VERSION }}
 
       - name: Build program (generates keypair for Anchor safety checks)
@@ -141,7 +141,7 @@ jobs:
       - name: Install Anchor CLI
         run: |
           cargo install --git https://github.com/coral-xyz/anchor avm --force
-          avm install ${{ env.ANCHOR_VERSION }}
+          avm install ${{ env.ANCHOR_VERSION }} --force
           avm use ${{ env.ANCHOR_VERSION }}
 
       - name: Setup Node.js
@@ -198,7 +198,7 @@ jobs:
       - name: Install Anchor CLI
         run: |
           cargo install --git https://github.com/coral-xyz/anchor avm --force
-          avm install ${{ env.ANCHOR_VERSION }}
+          avm install ${{ env.ANCHOR_VERSION }} --force
           avm use ${{ env.ANCHOR_VERSION }}
 
       - name: Build program
