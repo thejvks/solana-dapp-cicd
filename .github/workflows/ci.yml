@@ -64,12 +64,8 @@ jobs:
 
       - name: Install Anchor CLI
         run: |
-          cargo install --git https://github.com/coral-xyz/anchor avm --force
-          rm -f "$(which anchor 2>/dev/null)" || true
-          rm -f "$HOME/.cargo/bin/anchor" || true
-          rm -f "$HOME/.avm/bin/anchor" || true
-          avm install ${{ env.ANCHOR_VERSION }}
-          avm use ${{ env.ANCHOR_VERSION }}
+          cargo install --git https://github.com/coral-xyz/anchor --tag v${{ env.ANCHOR_VERSION }} anchor-cli --locked --force
+          anchor --version
 
       - name: Build program (generates keypair for Anchor safety checks)
         run: anchor build
@@ -143,12 +139,8 @@ jobs:
 
       - name: Install Anchor CLI
         run: |
-          cargo install --git https://github.com/coral-xyz/anchor avm --force
-          rm -f "$(which anchor 2>/dev/null)" || true
-          rm -f "$HOME/.cargo/bin/anchor" || true
-          rm -f "$HOME/.avm/bin/anchor" || true
-          avm install ${{ env.ANCHOR_VERSION }}
-          avm use ${{ env.ANCHOR_VERSION }}
+          cargo install --git https://github.com/coral-xyz/anchor --tag v${{ env.ANCHOR_VERSION }} anchor-cli --locked --force
+          anchor --version
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -203,12 +195,8 @@ jobs:
 
       - name: Install Anchor CLI
         run: |
-          cargo install --git https://github.com/coral-xyz/anchor avm --force
-          rm -f "$(which anchor 2>/dev/null)" || true
-          rm -f "$HOME/.cargo/bin/anchor" || true
-          rm -f "$HOME/.avm/bin/anchor" || true
-          avm install ${{ env.ANCHOR_VERSION }}
-          avm use ${{ env.ANCHOR_VERSION }}
+          cargo install --git https://github.com/coral-xyz/anchor --tag v${{ env.ANCHOR_VERSION }} anchor-cli --locked --force
+          anchor --version
 
       - name: Build program
         run: anchor build
