@@ -157,9 +157,13 @@ jobs:
 
       - name: Configure Solana for devnet
         run: |
-          solana config set --url ${{ secrets.DEVNET_SOLANA_RPC_URL || 'https://api.devnet.solana.com' }}
-          echo "${{ secrets.DEVNET_DEPLOYER_KEYPAIR }}" > deployer.json
+          RPC="${DEVNET_RPC_URL:-https://api.devnet.solana.com}"
+          solana config set --url "$RPC"
+          echo "$DEPLOYER_KEY" > deployer.json
           solana config set --keypair deployer.json
+        env:
+          DEVNET_RPC_URL: ${{ secrets.DEVNET_SOLANA_RPC_URL }}
+          DEPLOYER_KEY: ${{ secrets.DEVNET_DEPLOYER_KEYPAIR }}
 
       - name: Check deployer balance
         run: |
@@ -201,7 +205,7 @@ jobs:
   deploy-frontend:
     name: "🌐 Deploy Frontend to Vercel"
     runs-on: ubuntu-latest
-    needs: [deploy-program]
+    needs: [build, deploy-program]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -246,7 +250,7 @@ jobs:
   smoke-test:
     name: "🔥 Smoke Tests"
     runs-on: ubuntu-latest
-    needs: [deploy-program, deploy-frontend]
+    needs: [build, deploy-program, deploy-frontend]
     if: ${{ github.event.inputs.skip_smoke_test != 'true' }}
     steps:
       - name: Checkout code
@@ -271,7 +275,7 @@ jobs:
           bash scripts/smoke-test.sh devnet
         env:
           PROGRAM_ID: ${{ needs.build.outputs.program_id }}
-          RPC_URL: ${{ secrets.DEVNET_SOLANA_RPC_URL || 'https://api.devnet.solana.com' }}
+          RPC_URL: ${{ secrets.DEVNET_SOLANA_RPC_URL }}
 
   # ===========================================================================
   # Stage 6: Notify team
@@ -283,7 +287,7 @@ jobs:
     if: always()
     steps:
       - name: Send Slack notification
-        if: ${{ secrets.SLACK_WEBHOOK_URL != '' }}
+        if: ${{ env.SLACK_WEBHOOK_URL != '' }}
         uses: slackapi/slack-github-action@v1.26.0
         with:
           payload: |
