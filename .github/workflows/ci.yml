@@ -66,8 +66,11 @@ jobs:
           cargo install --git https://github.com/coral-xyz/anchor --tag v${{ env.ANCHOR_VERSION }} anchor-cli --force
           anchor --version
 
-      - name: Build program (generates keypair for Anchor safety checks)
-        run: anchor build
+      - name: Generate Cargo.lock and build program
+        run: |
+          rm -f Cargo.lock
+          cargo generate-lockfile
+          anchor build
 
       - name: Run cargo fmt check
         run: cargo fmt --all -- --check
