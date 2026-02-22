@@ -3,13 +3,13 @@ seeds = false
 skip-lint = false
 
 [programs.localnet]
-counter = "CountrXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+counter = "11111111111111111111111111111112"
 
 [programs.devnet]
-counter = "CountrXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+counter = "11111111111111111111111111111112"
 
 [programs.mainnet]
-counter = "CountrXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+counter = "11111111111111111111111111111112"
 
 [registry]
 url = "https://api.apr.dev"

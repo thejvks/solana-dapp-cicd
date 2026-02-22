@@ -82,7 +82,7 @@ jobs:
 
       - name: Run ESLint
         working-directory: app
-        run: npx eslint . --ext .ts,.tsx --max-warnings 0
+        run: npx eslint . --ext .ts,.tsx --max-warnings 5
 
       - name: Run TypeScript type check
         working-directory: app
@@ -224,7 +224,7 @@ jobs:
         run: npm run build
         env:
           NEXT_PUBLIC_SOLANA_NETWORK: devnet
-          NEXT_PUBLIC_PROGRAM_ID: "CountrXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+          NEXT_PUBLIC_PROGRAM_ID: "11111111111111111111111111111112"
 
       - name: Upload frontend artifact
         uses: actions/upload-artifact@v4

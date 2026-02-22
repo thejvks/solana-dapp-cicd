@@ -1,15 +1,14 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { Program, AnchorProvider, BN, web3 } from "@coral-xyz/anchor";
 import Head from "next/head";
 
-// IDL will be generated after `anchor build`
-import idl from "../../target/idl/counter.json";
+import idl from "../idl/counter.json";
 
 const PROGRAM_ID = new web3.PublicKey(
   process.env.NEXT_PUBLIC_PROGRAM_ID ||
-    "CountrXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+    "11111111111111111111111111111112"
 );
 
 export default function Home() {
@@ -19,29 +18,29 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [txSig, setTxSig] = useState<string>("");
 
-  const getProvider = () => {
+  const getProvider = useCallback(() => {
     if (!wallet.publicKey) return null;
     return new AnchorProvider(connection, wallet as any, {
       commitment: "confirmed",
     });
-  };
+  }, [connection, wallet]);
 
-  const getProgram = () => {
+  const getProgram = useCallback(() => {
     const provider = getProvider();
     if (!provider) return null;
     return new Program(idl as any, PROGRAM_ID, provider);
-  };
+  }, [getProvider]);
 
-  const getCounterPDA = () => {
+  const getCounterPDA = useCallback(() => {
     if (!wallet.publicKey) return null;
     const [pda] = web3.PublicKey.findProgramAddressSync(
       [Buffer.from("counter"), wallet.publicKey.toBuffer()],
       PROGRAM_ID
     );
     return pda;
-  };
+  }, [wallet.publicKey]);
 
-  const fetchCount = async () => {
+  const fetchCount = useCallback(async () => {
     const program = getProgram();
     const pda = getCounterPDA();
     if (!program || !pda) return;
@@ -52,11 +51,13 @@ export default function Home() {
     } catch {
       setCount(null);
     }
-  };
+  }, [getProgram, getCounterPDA]);
 
   useEffect(() => {
-    if (wallet.publicKey) fetchCount();
-  }, [wallet.publicKey]);
+    if (wallet.publicKey) {
+      fetchCount();
+    }
+  }, [wallet.publicKey, fetchCount]);
 
   const initialize = async () => {
     const program = getProgram();

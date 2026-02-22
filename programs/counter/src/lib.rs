@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
-// Program ID — will be replaced after first deployment
-declare_id!("CountrXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
+// Program ID — will be replaced after first `anchor build`
+declare_id!("11111111111111111111111111111112");
 
 #[program]
 pub mod counter {
