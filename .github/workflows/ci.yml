@@ -26,8 +26,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  SOLANA_VERSION: "1.18.26"
-  ANCHOR_VERSION: "0.30.1"
+  SOLANA_VERSION: "2.1.15"
+  ANCHOR_VERSION: "0.32.1"
   NODE_VERSION: "20"
 
 jobs:
@@ -41,8 +41,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Rust 1.78.0
-        uses: dtolnay/rust-toolchain@1.78.0
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
 
@@ -86,8 +86,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Rust 1.78.0 (compatible with Solana 1.18 / Anchor 0.30)
-        uses: dtolnay/rust-toolchain@1.78.0
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Cache cargo registry
         uses: actions/cache@v4
@@ -141,8 +141,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Rust 1.78.0 (compatible with Solana 1.18 / Anchor 0.30)
-        uses: dtolnay/rust-toolchain@1.78.0
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Cache cargo registry
         uses: actions/cache@v4
