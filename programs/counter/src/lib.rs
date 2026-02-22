@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
 
+// Program ID — will be replaced after first deployment
 declare_id!("CountrXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
 
 #[program]
