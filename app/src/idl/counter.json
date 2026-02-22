@@ -1,6 +1,9 @@
 {
   "version": "0.1.0",
   "name": "counter",
+  "metadata": {
+    "address": "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
+  },
   "instructions": [
     {
       "name": "initialize",

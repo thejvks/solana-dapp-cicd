@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-import { AnchorProvider, BN, web3 } from "@coral-xyz/anchor";
-import type { Program as AnchorProgram } from "@coral-xyz/anchor";
+import { AnchorProvider, BN, Program, web3 } from "@coral-xyz/anchor";
 import Head from "next/head";
 
 import idl from "../idl/counter.json";
@@ -12,17 +11,11 @@ const PROGRAM_ID = new web3.PublicKey(
     "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
 );
 
-// Use a loose type to avoid deep type instantiation issues with Anchor IDL generics
-type CounterProgram = AnchorProgram;
-
-async function createProgram(
-  idlJson: Record<string, unknown>,
-  programId: web3.PublicKey,
-  provider: AnchorProvider
-): Promise<CounterProgram> {
-  // Dynamic import avoids tsc deep-instantiation error TS2589
-  const { Program } = await import("@coral-xyz/anchor");
-  return new Program(idlJson as never, programId, provider) as CounterProgram;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function createProgram(provider: AnchorProvider): any {
+  // Cast to any to avoid Anchor's deep generic type instantiation (TS2589)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return new (Program as any)(idl, provider);
 }
 
 export default function Home() {
@@ -34,7 +27,8 @@ export default function Home() {
 
   const getProvider = useCallback((): AnchorProvider | null => {
     if (!wallet.publicKey) return null;
-    return new AnchorProvider(connection, wallet as never, {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return new AnchorProvider(connection, wallet as any, {
       commitment: "confirmed",
     });
   }, [connection, wallet]);
@@ -54,9 +48,9 @@ export default function Home() {
     if (!provider || !pda) return;
 
     try {
-      const program = await createProgram(idl as Record<string, unknown>, PROGRAM_ID, provider);
-      const account = await (program.account as Record<string, { fetch: (key: web3.PublicKey) => Promise<{ count: BN }> }>)["counter"].fetch(pda);
-      setCount(account.count.toNumber());
+      const program = createProgram(provider);
+      const account = await program.account.counter.fetch(pda);
+      setCount((account.count as BN).toNumber());
     } catch {
       setCount(null);
     }
@@ -75,7 +69,7 @@ export default function Home() {
 
     setLoading(true);
     try {
-      const program = await createProgram(idl as Record<string, unknown>, PROGRAM_ID, provider);
+      const program = createProgram(provider);
       const tx = await program.methods
         .initialize()
         .accounts({
@@ -99,7 +93,7 @@ export default function Home() {
 
     setLoading(true);
     try {
-      const program = await createProgram(idl as Record<string, unknown>, PROGRAM_ID, provider);
+      const program = createProgram(provider);
       const tx = await program.methods
         .increment()
         .accounts({ counter: pda, authority: wallet.publicKey })
@@ -119,7 +113,7 @@ export default function Home() {
 
     setLoading(true);
     try {
-      const program = await createProgram(idl as Record<string, unknown>, PROGRAM_ID, provider);
+      const program = createProgram(provider);
       const tx = await program.methods
         .decrement()
         .accounts({ counter: pda, authority: wallet.publicKey })

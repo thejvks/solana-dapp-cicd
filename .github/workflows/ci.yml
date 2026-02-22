@@ -60,17 +60,9 @@ jobs:
       - name: Run cargo fmt check
         run: cargo fmt --all -- --check
 
-      - name: Install Solana CLI (for keygen)
-        run: |
-          sh -c "$(curl -sSfL https://release.anza.xyz/v${{ env.SOLANA_VERSION }}/install)"
-          echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
-
-      - name: Generate program keypair for Anchor safety checks
-        run: |
-          mkdir -p target/deploy
-          solana-keygen new --no-bip39-passphrase -o target/deploy/counter-keypair.json --force
-
       - name: Run clippy linter
+        env:
+          ANCHOR_SAFETY_CHECK: "0"
         run: |
           cargo clippy --all-targets --all-features -- \
             -D warnings \

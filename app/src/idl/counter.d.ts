@@ -3,6 +3,7 @@
 export interface CounterIDL {
   version: string;
   name: string;
+  metadata: { address: string };
   instructions: Array<{
     name: string;
     accounts: Array<{ name: string; isMut: boolean; isSigner: boolean }>;
