@@ -65,7 +65,9 @@ jobs:
       - name: Install Anchor CLI
         run: |
           cargo install --git https://github.com/coral-xyz/anchor avm --force
-          rm -f "$HOME/.cargo/bin/anchor"
+          rm -f "$(which anchor 2>/dev/null)" || true
+          rm -f "$HOME/.cargo/bin/anchor" || true
+          rm -f "$HOME/.avm/bin/anchor" || true
           avm install ${{ env.ANCHOR_VERSION }}
           avm use ${{ env.ANCHOR_VERSION }}
 
@@ -142,7 +144,9 @@ jobs:
       - name: Install Anchor CLI
         run: |
           cargo install --git https://github.com/coral-xyz/anchor avm --force
-          rm -f "$HOME/.cargo/bin/anchor"
+          rm -f "$(which anchor 2>/dev/null)" || true
+          rm -f "$HOME/.cargo/bin/anchor" || true
+          rm -f "$HOME/.avm/bin/anchor" || true
           avm install ${{ env.ANCHOR_VERSION }}
           avm use ${{ env.ANCHOR_VERSION }}
 
@@ -200,7 +204,9 @@ jobs:
       - name: Install Anchor CLI
         run: |
           cargo install --git https://github.com/coral-xyz/anchor avm --force
-          rm -f "$HOME/.cargo/bin/anchor"
+          rm -f "$(which anchor 2>/dev/null)" || true
+          rm -f "$HOME/.cargo/bin/anchor" || true
+          rm -f "$HOME/.avm/bin/anchor" || true
           avm install ${{ env.ANCHOR_VERSION }}
           avm use ${{ env.ANCHOR_VERSION }}
 
