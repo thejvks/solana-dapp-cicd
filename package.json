@@ -1,0 +1,30 @@
+{
+  "name": "solana-dapp-cicd",
+  "version": "1.0.0",
+  "description": "Complete CI/CD pipeline for Solana DApp deployment — Anchor program + Next.js frontend with canary deployments, rollback, smoke tests, and Slack notifications",
+  "scripts": {
+    "lint:program": "cargo clippy --manifest-path programs/counter/Cargo.toml -- -D warnings",
+    "lint:frontend": "cd app && npx eslint . --ext .ts,.tsx",
+    "lint": "npm run lint:program && npm run lint:frontend",
+    "test": "anchor test",
+    "build:program": "anchor build",
+    "build:frontend": "cd app && npm run build",
+    "build": "npm run build:program && npm run build:frontend",
+    "smoke-test": "bash scripts/smoke-test.sh",
+    "deploy:devnet": "anchor deploy --provider.cluster devnet",
+    "deploy:mainnet": "anchor deploy --provider.cluster mainnet"
+  },
+  "dependencies": {
+    "@coral-xyz/anchor": "^0.30.1",
+    "@solana/web3.js": "^1.95.0"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.3.0",
+    "@types/mocha": "^9.0.0",
+    "chai": "^4.3.4",
+    "mocha": "^9.0.3",
+    "ts-mocha": "^10.0.0",
+    "typescript": "^4.3.5"
+  },
+  "license": "MIT"
+}

@@ -1,0 +1,337 @@
+# =============================================================================
+# Deploy to Devnet — Canary environment for testing before mainnet
+# =============================================================================
+# Triggers: Push to main branch OR manual dispatch
+# Stages: Build → Deploy Program → Deploy Frontend → Smoke Test → Notify
+# =============================================================================
+
+name: Deploy to Devnet (Canary)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'programs/**'
+      - 'app/**'
+      - 'Anchor.toml'
+  workflow_dispatch:
+    inputs:
+      skip_smoke_test:
+        description: 'Skip smoke tests'
+        required: false
+        default: 'false'
+
+env:
+  SOLANA_VERSION: "1.18.26"
+  ANCHOR_VERSION: "0.30.1"
+  NODE_VERSION: "20"
+  CLUSTER: "devnet"
+
+jobs:
+  # ===========================================================================
+  # Stage 1: Build program with verified build
+  # ===========================================================================
+  build:
+    name: "🔨 Build Program"
+    runs-on: ubuntu-latest
+    outputs:
+      program_id: ${{ steps.program-info.outputs.program_id }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: rust-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install Solana CLI
+        run: |
+          sh -c "$(curl -sSfL https://release.anza.xyz/v${{ env.SOLANA_VERSION }}/install)"
+          echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
+
+      - name: Install Anchor CLI
+        run: |
+          cargo install --git https://github.com/coral-xyz/anchor avm --force
+          avm install ${{ env.ANCHOR_VERSION }}
+          avm use ${{ env.ANCHOR_VERSION }}
+
+      - name: Build program
+        run: anchor build
+
+      - name: Extract program info
+        id: program-info
+        run: |
+          PROGRAM_ID=$(solana-keygen pubkey target/deploy/counter-keypair.json 2>/dev/null || echo "CountrXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
+          echo "program_id=$PROGRAM_ID" >> $GITHUB_OUTPUT
+          echo "Program ID: $PROGRAM_ID"
+          echo "Program size: $(wc -c < target/deploy/counter.so) bytes"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: devnet-build
+          path: |
+            target/deploy/counter.so
+            target/deploy/counter-keypair.json
+            target/idl/counter.json
+
+  # ===========================================================================
+  # Stage 2: Save current buffer for rollback
+  # ===========================================================================
+  save-rollback-state:
+    name: "💾 Save Rollback State"
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Solana CLI
+        run: |
+          sh -c "$(curl -sSfL https://release.anza.xyz/v${{ env.SOLANA_VERSION }}/install)"
+          echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
+
+      - name: Configure Solana for devnet
+        run: |
+          solana config set --url https://api.devnet.solana.com
+          echo "${{ secrets.DEVNET_DEPLOYER_KEYPAIR }}" > deployer.json
+          solana config set --keypair deployer.json
+        env:
+          DEVNET_DEPLOYER_KEYPAIR: ${{ secrets.DEVNET_DEPLOYER_KEYPAIR }}
+
+      - name: Save current program state
+        id: save-state
+        continue-on-error: true
+        run: |
+          PROGRAM_ID="${{ needs.build.outputs.program_id }}"
+          echo "Saving current state of program: $PROGRAM_ID"
+
+          # Try to get current program info for rollback
+          PROGRAM_INFO=$(solana program show "$PROGRAM_ID" 2>/dev/null || echo "NEW_DEPLOYMENT")
+
+          echo "program_info<<EOF" >> $GITHUB_OUTPUT
+          echo "$PROGRAM_INFO" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+          # Save deployment timestamp
+          echo "deploy_timestamp=$(date -u +%Y%m%d_%H%M%S)" >> $GITHUB_OUTPUT
+
+      - name: Upload rollback state
+        uses: actions/upload-artifact@v4
+        with:
+          name: rollback-state-${{ github.sha }}
+          path: |
+            deployer.json
+          retention-days: 30
+
+  # ===========================================================================
+  # Stage 3: Deploy program to devnet
+  # ===========================================================================
+  deploy-program:
+    name: "🚀 Deploy Program to Devnet"
+    runs-on: ubuntu-latest
+    needs: [build, save-rollback-state]
+    environment: devnet
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: devnet-build
+          path: target/deploy/
+
+      - name: Install Solana CLI
+        run: |
+          sh -c "$(curl -sSfL https://release.anza.xyz/v${{ env.SOLANA_VERSION }}/install)"
+          echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
+
+      - name: Configure Solana for devnet
+        run: |
+          solana config set --url ${{ secrets.DEVNET_SOLANA_RPC_URL || 'https://api.devnet.solana.com' }}
+          echo "${{ secrets.DEVNET_DEPLOYER_KEYPAIR }}" > deployer.json
+          solana config set --keypair deployer.json
+
+      - name: Check deployer balance
+        run: |
+          BALANCE=$(solana balance | awk '{print $1}')
+          echo "Deployer balance: $BALANCE SOL"
+          if (( $(echo "$BALANCE < 1" | bc -l) )); then
+            echo "⚠️ Low balance! Requesting airdrop..."
+            solana airdrop 2 || echo "Airdrop failed - may need manual funding"
+          fi
+
+      - name: Deploy program to devnet
+        id: deploy
+        run: |
+          echo "Deploying counter program to devnet..."
+          DEPLOY_OUTPUT=$(anchor deploy --provider.cluster devnet 2>&1)
+          echo "$DEPLOY_OUTPUT"
+
+          # Extract program ID from deploy output
+          echo "deploy_output<<EOF" >> $GITHUB_OUTPUT
+          echo "$DEPLOY_OUTPUT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+          echo "✅ Program deployed to devnet successfully!"
+
+      - name: Upload IDL to devnet
+        continue-on-error: true
+        run: |
+          anchor idl init --provider.cluster devnet \
+            --filepath target/idl/counter.json \
+            ${{ needs.build.outputs.program_id }} 2>/dev/null || \
+          anchor idl upgrade --provider.cluster devnet \
+            --filepath target/idl/counter.json \
+            ${{ needs.build.outputs.program_id }} 2>/dev/null || \
+          echo "IDL upload skipped"
+
+  # ===========================================================================
+  # Stage 4: Deploy frontend to Vercel
+  # ===========================================================================
+  deploy-frontend:
+    name: "🌐 Deploy Frontend to Vercel"
+    runs-on: ubuntu-latest
+    needs: [deploy-program]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install Vercel CLI
+        run: npm i -g vercel@latest
+
+      - name: Install frontend dependencies
+        working-directory: app
+        run: npm ci
+
+      - name: Pull Vercel environment
+        working-directory: app
+        run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Build frontend for Vercel
+        working-directory: app
+        run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          NEXT_PUBLIC_SOLANA_NETWORK: devnet
+          NEXT_PUBLIC_PROGRAM_ID: ${{ needs.build.outputs.program_id }}
+
+      - name: Deploy to Vercel preview
+        working-directory: app
+        id: vercel-deploy
+        run: |
+          DEPLOY_URL=$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }})
+          echo "url=$DEPLOY_URL" >> $GITHUB_OUTPUT
+          echo "Frontend deployed to: $DEPLOY_URL"
+
+  # ===========================================================================
+  # Stage 5: Smoke tests — Verify deployment is working
+  # ===========================================================================
+  smoke-test:
+    name: "🔥 Smoke Tests"
+    runs-on: ubuntu-latest
+    needs: [deploy-program, deploy-frontend]
+    if: ${{ github.event.inputs.skip_smoke_test != 'true' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install Solana CLI
+        run: |
+          sh -c "$(curl -sSfL https://release.anza.xyz/v${{ env.SOLANA_VERSION }}/install)"
+          echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run smoke tests against devnet
+        run: |
+          chmod +x scripts/smoke-test.sh
+          bash scripts/smoke-test.sh devnet
+        env:
+          PROGRAM_ID: ${{ needs.build.outputs.program_id }}
+          RPC_URL: ${{ secrets.DEVNET_SOLANA_RPC_URL || 'https://api.devnet.solana.com' }}
+
+  # ===========================================================================
+  # Stage 6: Notify team
+  # ===========================================================================
+  notify:
+    name: "📢 Notify Team"
+    runs-on: ubuntu-latest
+    needs: [deploy-program, deploy-frontend, smoke-test]
+    if: always()
+    steps:
+      - name: Send Slack notification
+        if: ${{ secrets.SLACK_WEBHOOK_URL != '' }}
+        uses: slackapi/slack-github-action@v1.26.0
+        with:
+          payload: |
+            {
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "${{ needs.smoke-test.result == 'success' && '✅ Devnet Deploy Successful' || '❌ Devnet Deploy Failed' }}"
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    { "type": "mrkdwn", "text": "*Branch:*\n`${{ github.ref_name }}`" },
+                    { "type": "mrkdwn", "text": "*Commit:*\n`${{ github.sha }}`" },
+                    { "type": "mrkdwn", "text": "*Program Deploy:*\n${{ needs.deploy-program.result }}" },
+                    { "type": "mrkdwn", "text": "*Frontend Deploy:*\n${{ needs.deploy-frontend.result }}" },
+                    { "type": "mrkdwn", "text": "*Smoke Tests:*\n${{ needs.smoke-test.result }}" },
+                    { "type": "mrkdwn", "text": "*Triggered by:*\n${{ github.actor }}" }
+                  ]
+                },
+                {
+                  "type": "actions",
+                  "elements": [
+                    {
+                      "type": "button",
+                      "text": { "type": "plain_text", "text": "View Run" },
+                      "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+
+      - name: Post deployment summary
+        run: |
+          echo "## 🚀 Devnet Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Component | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Program Deploy | ${{ needs.deploy-program.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend Deploy | ${{ needs.deploy-frontend.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Smoke Tests | ${{ needs.smoke-test.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY

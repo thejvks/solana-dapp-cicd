@@ -1,0 +1,31 @@
+# Anchor / Solana
+target/
+.anchor/
+test-ledger/
+
+# Node
+node_modules/
+app/node_modules/
+app/.next/
+app/out/
+
+# Environment & secrets
+.env
+.env.local
+.env*.local
+*.pem
+deployer.json
+*-keypair.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Vercel
+.vercel/
